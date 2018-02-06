@@ -9,11 +9,11 @@ from bokeh.layouts import column
 from config import Config
 
 # Set up data
-data_days = list(range(1, Config.MAX_DAYS+1))
-data_bugs = [random.randint(1,100) for i in range(1, Config.MAX_DAYS + 1)]
+data_days = list(range(1, Config.BARS_MAX_DAYS+1))
+data_bugs = [random.randint(1,100) for i in range(1, Config.BARS_MAX_DAYS + 1)]
 
-x = data_days[:Config.DEFAULT_DAYS]
-y = data_bugs[:Config.DEFAULT_DAYS]
+x = data_days[:Config.BARS_DEFAULT_DAYS]
+y = data_bugs[:Config.BARS_DEFAULT_DAYS]
 
 source = ColumnDataSource(data=dict(x=x, y=y))
 
@@ -46,7 +46,7 @@ plot.xaxis.axis_label = "Days after app deployment"
 plot.xaxis.major_label_orientation = 1
 
 # Set up widget
-bar_slider = Slider(title='Number of Days', value=Config.DEFAULT_DAYS, start=1, end=100, step=1)
+bar_slider = Slider(title='Number of Days', value=Config.BARS_DEFAULT_DAYS, start=1, end=100, step=1)
 
 # create callback function
 def update_days(attrname, old, new):
