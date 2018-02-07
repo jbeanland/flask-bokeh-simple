@@ -1,36 +1,17 @@
+<!DOCTYPE html>
 <html>
-  <body>
-    {{ plot_script | safe }}
-  </body>
-</html>
-
-
-
-
-
-
-
-<!-- <!DOCTYPE html>
-<html>
-
 <head>
-    <title>Bar Charts with Bokeh</title>
-
-    <link rel="stylesheet" href="http://cdn.pydata.org/bokeh/release/bokeh-0.12.13.min.css">
-    <link rel="stylesheet" href="http://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.13.min.css">
+    <title>{{ title }} - Bokeh/Flask example</title>
 </head>
-
-
 <body>
-    <h1>Bugs found over the last {{ bars_count }} days</h1>
+    <div>
+        Flask/Bokeh example:
+        <a href="/sliders">Sliders</a>
+        <a href="/bars">Bars</a>
 
-
-    <script src="http://cdn.pydata.org/bokeh/release/bokeh-0.12.13.min.js"></script>
-    <script src="http://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.13.min.js"></script>
-
-
-    {{ plot_script|safe }}
+    </div>
+    {% if plot_script %}
+    {{ plot_script | safe }}
+    {% endif %}
 </body>
-
 </html>
- -->
