@@ -1,13 +1,134 @@
 # A Bokeh starter app with Flask.
 
-A combination of [the Flask sliders example](https://github.com/bokeh/bokeh/blob/master/examples/app/sliders.py) and [the Full Stack Python bokeh/flask example](https://www.fullstackpython.com/blog/responsive-bar-charts-bokeh-flask-python-3.html).
 
-Written as a not-quite-trivial example of getting a couple of these things running on a flask server to be later integrated into a full app.
+A non-trivial skeleton for an integrated flask-bokeh app running [bokeh sliders example](https://github.com/bokeh/bokeh/blob/master/examples/app/sliders.py) and [the Full Stack Python bokeh bars example](https://www.fullstackpython.com/blog/responsive-bar-charts-bokeh-flask-python-3.html).
 
-Running on bokeh 0.12.13.
+Running on bokeh 0.13
 
 To run:
-* In one terminal: `python app.py`.
-* In another: `bokeh serve sliders.py bars.py --allow-websocket-origin=localhost:5000`
+* In one terminal:  `export FLASK_APP=application.py`, `flask run`.
+* In another: `bokeh serve app/bokeh/sliders.py app/bokeh/bars.py --allow-websocket-origin=localhost:5000`
 
-Currently still specifying the .py files to run, want to throw a directory at it really.
+
+
+## Running through Nginx with SSL
+
+To run behind a reverse proxy with SSL, we must direct flask traffic to gunicorn running on localhost:8000 and bokeh traffic to the bokeh server on localhost:5006. We also must change the addresses called with `server_document` in the route files, set up supervisor to run the servers, and we should copy the bokeh static assets into our application's static folder.
+
+To get the bokeh plots to the 5006 server, we will prefix the bokeh app names in our routes with `/bokeh_plots`, we can then strip off the prefix in the Nginx config file.
+
+#### 1) Change bokeh routes:
+currently we call
+`script = server_document("http://localhost:5006/bars")`
+We now want to call
+`script = server_document("https://example.com/bokeh_script/bars")`
+
+#### 2) Nginx Config:
+```
+# redirect HTTP traffic to HTTPS
+server {
+    listen      80;
+    server_name _;
+    return      301 https://$server_name$request_uri;
+}
+
+server {
+    listen      443 default_server;
+    server_name _;
+
+    # add Strict-Transport-Security to prevent man in the middle attacks
+    add_header Strict-Transport-Security "max-age=31536000";
+
+    ssl on;
+
+    # SSL installation details will vary by platform
+    ssl_certificate /home/ubuntu/application/certs/cert.pem;
+    ssl_certificate_key /home/ubuntu/application/certs/key.pem;
+
+    # enables all versions of TLS, but not SSLv2 or v3 which are deprecated.
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+
+    # disables all weak ciphers
+    ssl_ciphers "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GC$
+
+    ssl_prefer_server_ciphers on;
+
+    # All bokeh plots are prefixed with some unique route, in this case 'bokeh_plots'
+    # Here we will collect these, strip off the prefix, and send the result to the bokeh server
+    # Sends https://example.com/bokeh_plots/sliders ⇒ http://localhost:5006/sliders
+    location /bokeh_plots  {
+        rewrite  ^/bokeh_plots/(.*)  /$1 break;
+        proxy_pass http://127.0.0.1:5006;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_http_version 1.1;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $host:$server_port;
+        proxy_buffering off;
+    }
+
+    # All traffic other than static and bokeh_plots goes to the gunicorn server
+    location / {
+        # forward application requests to the gunicorn server
+        proxy_pass http://localhost:8000;
+        proxy_redirect off;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+
+    location /static {
+        # handle static files directly, without forwarding to the application
+        alias /home/ubuntu/application/app/static;
+        expires 30d;
+    }
+}
+```
+
+#### 3) Supervisor
+We will want to run the bokeh and gunicorn servers with Supervisor. Bokeh serve needs to include the --use-xheaders tag to allow SSL.
+```
+; supervisor config file
+
+[unix_http_server]
+file=/tmp/supervisor.sock   ; (the path to the socket file)
+chmod=0700                  ; sockef file mode (default 0700)
+
+[supervisord]
+logfile=/var/log/supervisord.log ; (main log file; default $CWD/supervisord.log)
+pidfile=/var/run/supervisord.pid ; (supervisord pidfile; default $CWD/supervisord.pid)
+childlogdir=/var/log/supervisor  ; ('AUTO' child log dir, default $TEMP)
+
+; The section below must be in the present for the RPC (supervisorctl/web)
+; interface in to function.
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+[supervisorctl]
+serverurl=unix:///tmp/supervisor.sock ; use a unix:// URL for a unix socket
+
+[program:bokeh_apps]
+command=/path/to/bokeh serve app/bokeh/sliders.py app/bokeh/bars.py --allow-websocket-origin=localhost:8000 --allow-websocket-origin=localhost --allow-websocket-origin=example.com --use-xheaders
+
+directory=/home/ubuntu/application/
+autostart=true
+autorestart=true
+startretries=3
+numprocs=4
+process_name=%(program_name)s_%(process_num)02d
+stderr_logfile=/var/log/myapp.err.log
+stdout_logfile=/var/log/myapp.out.log
+user=ubuntu
+environment=USER="ubuntu",HOME="/home/ubuntu"
+
+[program:application]
+command=/home/ubuntu/application/venv/bin/gunicorn application:app
+directory=/home/ubuntu/application
+user=ubuntu
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+```

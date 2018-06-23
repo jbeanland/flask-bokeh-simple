@@ -1,3 +1,9 @@
+import os
+from dotenv import load_dotenv
+
+basedir = os.path.abspath(os.path.dirname(__file__))
+load_dotenv(os.path.join(basedir, '.env'))
+
+
 class Config(object):
-    BARS_MAX_DAYS = 100
-    BARS_DEFAULT_DAYS = 4
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'this-is-a-shitty-secret-key'
