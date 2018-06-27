@@ -92,43 +92,28 @@ We will want to run the bokeh and gunicorn servers with Supervisor. Bokeh serve 
 ```
 ; supervisor config file
 
-[unix_http_server]
-file=/tmp/supervisor.sock   ; (the path to the socket file)
-chmod=0700                  ; sockef file mode (default 0700)
-
-[supervisord]
-logfile=/var/log/supervisord.log ; (main log file; default $CWD/supervisord.log)
-pidfile=/var/run/supervisord.pid ; (supervisord pidfile; default $CWD/supervisord.pid)
-childlogdir=/var/log/supervisor  ; ('AUTO' child log dir, default $TEMP)
-
-; The section below must be in the present for the RPC (supervisorctl/web)
-; interface in to function.
-[rpcinterface:supervisor]
-supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
-
-[supervisorctl]
-serverurl=unix:///tmp/supervisor.sock ; use a unix:// URL for a unix socket
-
 [program:bokeh_apps]
-command=/path/to/bokeh serve app/bokeh/sliders.py app/bokeh/bars.py --allow-websocket-origin=localhost:8000 --allow-websocket-origin=localhost --allow-websocket-origin=example.com --use-xheaders
-
+command=/path/to/bokeh serve app/bokeh/sliders.py app/bokeh/bars.py --allow-websocket-origin=example.com --port=5006 --use-xheaders
 directory=/home/ubuntu/application/
 autostart=true
 autorestart=true
 startretries=3
-numprocs=4
+numprocs=1
 process_name=%(program_name)s_%(process_num)02d
-stderr_logfile=/var/log/myapp.err.log
-stdout_logfile=/var/log/myapp.out.log
+stderr_logfile=/var/log/app-bokeh.err.log
+stdout_logfile=/var/log/app-bokeh.out.log
 user=ubuntu
-environment=USER="ubuntu",HOME="/home/ubuntu"
+environment=USER="ubuntu",HOME="/home/ubuntu",PATH="/path/to/env/bin"
 
 [program:application]
-command=/home/ubuntu/application/venv/bin/gunicorn application:app
+command=/path/to/gunicorn application:app
 directory=/home/ubuntu/application
+stderr_logfile=/var/log/app-gunicorn.err.log
+stdout_logfile=/var/log/app-gunicorn.out.log
 user=ubuntu
 autostart=true
 autorestart=true
 stopasgroup=true
 killasgroup=true
+environment=USER="ubuntu",HOME="/home/ubuntu",PATH="/path/to/env/bin"
 ```
