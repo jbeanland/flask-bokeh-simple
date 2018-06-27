@@ -93,8 +93,8 @@ We will want to run the bokeh and gunicorn servers with Supervisor. Bokeh serve 
 ; supervisor config file
 
 [program:bokeh_apps]
-command=/path/to/bokeh serve app/bokeh/sliders.py app/bokeh/bars.py --allow-websocket-origin=example.com --port=5006 --use-xheaders
-directory=/home/ubuntu/application/
+command=/path/to/bokeh serve sliders.py bars.py --allow-websocket-origin=example.com --port=5006 --use-xheaders
+directory=/home/ubuntu/application/app/bokeh
 autostart=true
 autorestart=true
 startretries=3
@@ -117,3 +117,29 @@ stopasgroup=true
 killasgroup=true
 environment=USER="ubuntu",HOME="/home/ubuntu",PATH="/path/to/env/bin"
 ```
+
+# Authenticating Bokeh Sessions
+Clearly if we put some effort into building something with user logins we won't want some regular old alices and bobs just navigating to example.com/bokeh_plots/plot and bypassing our lovely authentication system. To solve this we will serve bokeh with `--session-ids external-signed` [as documented here](https://bokeh.pydata.org/en/latest/docs/reference/command/subcommands/serve.html). 
+
+This ensures that a valid session_id is present before doing anything, rather than just creating one at random on page startup. We will also serve with `--disable-index` which disables the otherwise handy index page of served plots.
+
+We will need to change the route file again, now using server_session instead of server_document so we can include a generated session_id. It may now look something like this:
+```
+from bokeh.embed import server_session
+from bokeh.util import session_id
+
+from flask import render_template
+
+from app.bokeh import bp
+
+
+@bp.route('/sliders')
+def sliders():
+    s_id = session_id.generate_session_id()
+    script = server_session(session_id=s_id, url="https://example.com/bokeh_plots/sliders")
+    return render_template('base.html', plot_script=script)
+```
+
+Finally we will need to set 2 environment variables for both processes: `BOKEH_SECRET_KEY` and `BOKEH_SIGN_SESSIONS`. The secret key is used to generate and verify the session_id and SIGN_SESSIONS to indicate that it should be externally signed. This can be achieved first by generating a key with `bokeh secret` and then by adding both into the supervisor config file:
+
+```environment=USER="ubuntu",HOME="/home/ubuntu",PATH="/home/ubuntu/anaconda3/envs/venv/bin",BOKEH_SECRET_KEY=asdfghjklpoiuytrewq,BOKEH_SIGN_SESSIONS=true```
