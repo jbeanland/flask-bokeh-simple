@@ -5,7 +5,7 @@ gunicorn==19.8.1
 itsdangerous==0.24
 Jinja2==2.10
 MarkupSafe==1.0
-numpy==1.14.0
+numpy==1.21.0
 packaging==17.1
 pandas==0.22.0
 pyparsing==2.2.0
