@@ -13,6 +13,6 @@ python-dateutil==2.6.1
 python-dotenv==0.8.2
 pytz==2017.3
 PyYAML==3.12
-six==1.11.0
+six==1.16.0
 tornado==4.5.3
 Werkzeug==0.14.1
