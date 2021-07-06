@@ -11,7 +11,7 @@ pandas==0.22.0
 pyparsing==2.2.0
 python-dateutil==2.6.1
 python-dotenv==0.8.2
-pytz==2017.3
+pytz==2021.1
 PyYAML==3.12
 six==1.11.0
 tornado==4.5.3
