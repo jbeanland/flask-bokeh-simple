@@ -1,5 +1,5 @@
 bokeh==0.13.0
-click==6.7
+click==8.0.1
 Flask==1.0.2
 gunicorn==19.8.1
 itsdangerous==0.24
